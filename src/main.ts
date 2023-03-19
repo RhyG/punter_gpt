@@ -8,6 +8,7 @@ import { Configuration, OpenAIApi } from "openai";
 import { Runner, RiskTolerance } from "index";
 
 import { SYSTEM_PROMPT } from "./message-content";
+import { interactive } from "./v2";
 
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
@@ -15,8 +16,8 @@ const configuration = new Configuration({
 
 const openai = new OpenAIApi(configuration);
 
-// const MODEL = "gpt-3.5-turbo";
-const MODEL = "gpt-4";
+const GPT_3 = "gpt-3.5-turbo";
+const GPT_4 = "gpt-4";
 
 function extractRace(data: string) {
   const injectedData = data
@@ -60,30 +61,16 @@ function generatePrompt(
   const exoticsRequest = allowExotics ? "Please include any recommended exotic bets." : "";
 
   const prompt = `${question}${budgetRequest} ${exoticsRequest}\nHere is the race information:\n${raceData}`;
-  console.log(prompt);
 
   return prompt;
 }
 
-function parseArgs() {
-  if (!process.env.npm_config_url) {
-    console.error("Please provide a URL as an argument.");
-    process.exit(1);
-  }
-
-  const url = process.env.npm_config_url;
-  const riskTolerance = (process.env.npm_config_risk as RiskTolerance) ?? "low";
-  const budget = process.env.npm_config_budget;
-  const model = process.env.npm_config_model ?? MODEL;
-  const allowExotics = Boolean(process.env.npm_config_allowExotics) ?? false;
-
-  return { url, riskTolerance, budget, model, allowExotics };
-}
-
 async function run() {
-  const { url, riskTolerance, budget, model, allowExotics } = parseArgs();
+  const { url, riskTolerance, budget, model: _model, allowExotics } = await interactive();
 
-  console.log(`Running PunterGPT with model ${model}, risk level ${riskTolerance}`);
+  const model = _model === "3" ? GPT_3 : GPT_4;
+
+  console.log(`Running PunterGPT with model ${model}, risk level ${riskTolerance}\n`);
 
   const response = await fetch(url);
   const data = await response.text();
