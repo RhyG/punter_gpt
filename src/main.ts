@@ -29,7 +29,12 @@ function extractRace(data: string) {
   return race;
 }
 
-function generatePrompt(riskTolerance: RiskTolerance, raceData: string, budget: string | undefined) {
+function generatePrompt(
+  riskTolerance: RiskTolerance,
+  raceData: string,
+  budget: string | undefined,
+  allowExotics: boolean
+) {
   const budgetAsDollar = `$${budget}`;
 
   let question: string;
@@ -48,21 +53,37 @@ function generatePrompt(riskTolerance: RiskTolerance, raceData: string, budget: 
       break;
   }
 
-  const budgetRequest = budget ? ` I have a budget of ${budgetAsDollar} and would like to use all of it this race` : "";
+  const budgetRequest = budget
+    ? ` I have a budget of ${budgetAsDollar} and would like to use all of it this race.`
+    : "";
 
-  return `${question}${budgetRequest} Here is the race information:\n${raceData}`;
+  const exoticsRequest = allowExotics ? "Please include any recommended exotic bets." : "";
+
+  const prompt = `${question}${budgetRequest} ${exoticsRequest}\nHere is the race information:\n${raceData}`;
+  console.log(prompt);
+
+  return prompt;
 }
 
-async function run() {
+function parseArgs() {
   if (!process.env.npm_config_url) {
     console.error("Please provide a URL as an argument.");
     process.exit(1);
   }
 
   const url = process.env.npm_config_url;
-  const riskTolerance = process.env.npm_config_risk as RiskTolerance;
+  const riskTolerance = (process.env.npm_config_risk as RiskTolerance) ?? "low";
   const budget = process.env.npm_config_budget;
   const model = process.env.npm_config_model ?? MODEL;
+  const allowExotics = Boolean(process.env.npm_config_allowExotics) ?? false;
+
+  return { url, riskTolerance, budget, model, allowExotics };
+}
+
+async function run() {
+  const { url, riskTolerance, budget, model, allowExotics } = parseArgs();
+
+  console.log(`Running PunterGPT with model ${model}, risk level ${riskTolerance}`);
 
   const response = await fetch(url);
   const data = await response.text();
@@ -115,7 +136,7 @@ async function run() {
     })),
   };
 
-  const prompt = generatePrompt(riskTolerance, JSON.stringify(final), budget);
+  const prompt = generatePrompt(riskTolerance, JSON.stringify(final), budget, allowExotics);
 
   try {
     const response = await openai.createChatCompletion({
