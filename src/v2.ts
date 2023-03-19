@@ -28,7 +28,7 @@ export const interactive = async (): Promise<Response> => {
     {
       type: "input",
       name: "url",
-      message: chalk.blue("Enter URL:"),
+      message: chalk.blue("Enter form guide URL:"),
     },
     {
       type: "input",
