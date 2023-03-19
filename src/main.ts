@@ -68,76 +68,71 @@ async function run() {
 
   const race = extractRace(data);
 
+  const runners: Runner[] = [];
+
+  // @ts-ignore
+  race.Runners.forEach((runner) => {
+    const { Name, Age, TrainerName, Jockey, Weight, PreviousForm, stats, SaddleNumber } = runner;
+
+    // @ts-ignore
+    const previousResults = PreviousForm.map((form) => {
+      return `${form.Finish}/${form.NumberOfRunners}`;
+    });
+
+    runners.push({
+      name: `${Name}`,
+      saddle_number: SaddleNumber,
+      age: `${Age} years old`,
+      trainer: `${TrainerName}`,
+      jockey: `${Jockey.Name}`,
+      jockey_weight: `${Weight.Total}`,
+      previous_results: `${previousResults.slice(0, 5)}`,
+      win_percent: `${stats?.winPercent ?? "Unavailable"}`,
+      place_percent: `${stats?.placePercent ?? "Unavailable"}`,
+      fluctuations: [],
+    });
+  });
+
+  // @ts-ignore
+  race.fluctuations.forEach((fluctuation: Fluctuation) => {
+    const horse = runners.find((h) => {
+      return h.saddle_number === fluctuation.saddle_number;
+    });
+    horse?.fluctuations.push(fluctuation);
+  });
+
+  const final = {
+    trackInformation: {
+      distance: race.distance,
+      condition: race.Meeting.TrackCondition,
+      surface: race.Meeting.TrackSurface,
+      classes: race.Classes,
+    },
+    runners: runners.map((horse) => ({
+      ...horse,
+      fluctuations: horse?.fluctuations.slice(-3),
+    })),
+  };
+
+  const prompt = generatePrompt(riskTolerance, JSON.stringify(final), budget);
+
   try {
-    const runners: Runner[] = [];
-
-    // @ts-ignore
-    race.Runners.forEach((runner) => {
-      const { Name, Age, TrainerName, Jockey, Weight, PreviousForm, stats, SaddleNumber } = runner;
-
-      // @ts-ignore
-      const previousResults = PreviousForm.map((form) => {
-        return `${form.Finish}/${form.NumberOfRunners}`;
-      });
-
-      runners.push({
-        name: `${Name}`,
-        saddle_number: SaddleNumber,
-        age: `${Age} years old`,
-        trainer: `${TrainerName}`,
-        jockey: `${Jockey.Name}`,
-        jockey_weight: `${Weight.Total}`,
-        previous_results: `${previousResults.slice(0, 5)}`,
-        win_percent: `${stats?.winPercent ?? "Unavailable"}`,
-        place_percent: `${stats?.placePercent ?? "Unavailable"}`,
-        fluctuations: [],
-      });
+    const response = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: 2000,
+      temperature: 1,
+      stream: false,
     });
 
-    // @ts-ignore
-    race.fluctuations.forEach((fluctuation) => {
-      const horse = runners.find((h) => {
-        return h.saddle_number === fluctuation.saddle_number;
-      });
-      horse?.fluctuations.push(fluctuation);
-    });
-
-    const final = {
-      trackInformation: {
-        distance: race.distance,
-        condition: race.Meeting.TrackCondition,
-        surface: race.Meeting.TrackSurface,
-        classes: race.Classes,
-      },
-      runners: runners.map((horse) => ({
-        ...horse,
-        fluctuations: horse?.fluctuations.slice(-3),
-      })),
-    };
-
-    const prompt = generatePrompt(riskTolerance, JSON.stringify(final), budget);
-
-    try {
-      const response = await openai.createChatCompletion({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 2000,
-        temperature: 1,
-        stream: false,
-      });
-
-      //@ts-ignore
-      console.log(response.data.choices[0].message.content);
-    } catch (err) {
-      console.log("ChatGPT error: " + err);
-      return err;
-    }
-    // console.log(JSON.stringify(final));
-  } catch (e) {
-    console.error(e);
+    //@ts-ignore
+    console.log(response.data.choices[0].message.content);
+  } catch (err) {
+    console.log("ChatGPT error: " + err);
+    return err;
   }
 }
 
