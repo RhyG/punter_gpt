@@ -15,8 +15,8 @@ const configuration = new Configuration({
 
 const openai = new OpenAIApi(configuration);
 
-const MODEL = "gpt-3.5-turbo";
-// const MODEL = "gpt-4"
+// const MODEL = "gpt-3.5-turbo";
+const MODEL = "gpt-4";
 
 function extractRace(data: string) {
   const injectedData = data
@@ -62,6 +62,7 @@ async function run() {
   const url = process.env.npm_config_url;
   const riskTolerance = process.env.npm_config_risk as RiskTolerance;
   const budget = process.env.npm_config_budget;
+  const model = process.env.npm_config_model ?? MODEL;
 
   const response = await fetch(url);
   const data = await response.text();
@@ -118,7 +119,7 @@ async function run() {
 
   try {
     const response = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
+      model,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt },
