@@ -30,12 +30,7 @@ function extractRace(data: string) {
   return race;
 }
 
-function generatePrompt(
-  riskTolerance: RiskTolerance,
-  raceData: string,
-  budget: string | undefined,
-  allowExotics: boolean
-) {
+function generatePrompt(riskTolerance: RiskTolerance, raceData: string, budget: string | undefined, exotics: string[]) {
   const budgetAsDollar = `$${budget}`;
 
   let question: string;
@@ -58,15 +53,22 @@ function generatePrompt(
     ? ` I have a budget of ${budgetAsDollar} and would like to use all of it this race.`
     : "";
 
-  const exoticsRequest = allowExotics ? "Please include any recommended exotic bets." : "";
+  const allowExotics = exotics.length > 0;
+
+  const exoticsRequest = allowExotics
+    ? `I am willing to place exotics, please also consider placing the follow exotics: ${exotics.join(
+        ", "
+      )}. Not all are mandatory, but if you think any would be smart given your assessment include them.`
+    : "";
 
   const prompt = `${question}${budgetRequest} ${exoticsRequest}\nHere is the race information:\n${raceData}`;
+  console.log(prompt);
 
   return prompt;
 }
 
 async function run() {
-  const { url, riskTolerance, budget, model: _model, allowExotics } = await interactive();
+  const { url, riskTolerance, budget, model: _model, exotics } = await interactive();
 
   const model = _model === "3" ? GPT_3 : GPT_4;
 
@@ -123,7 +125,7 @@ async function run() {
     })),
   };
 
-  const prompt = generatePrompt(riskTolerance, JSON.stringify(final), budget, allowExotics);
+  const prompt = generatePrompt(riskTolerance, JSON.stringify(final), budget, exotics);
 
   try {
     const response = await openai.createChatCompletion({

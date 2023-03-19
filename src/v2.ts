@@ -7,7 +7,7 @@ type Response = {
   budget: string;
   riskTolerance: RiskTolerance;
   model: string;
-  allowExotics: boolean;
+  exotics: string[];
 };
 
 const askRiskLevel = async (): Promise<RiskTolerance> => {
@@ -84,6 +84,6 @@ export const interactive = async (): Promise<Response> => {
     budget,
     riskTolerance: riskLevel,
     model,
-    allowExotics: exoticsAllowed.length > 0,
+    exotics: exoticsAllowed,
   } as Response;
 };
